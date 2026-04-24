@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>SDR Engine</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F7F8FA;--s1:#FFF;--s2:#F0F2F5;--s3:#E4E7EC;--brd:#D5DAE1;--brd2:#B8BFC9;--t:#1A2233;--td:#5A6577;--tb:#0C1322;--ac:#2563EB;--ac2:rgba(37,99,235,.07);--ac3:rgba(37,99,235,.16);--gn:#059669;--gn2:rgba(5,150,105,.07);--rd:#DC2626;--rd2:rgba(220,38,38,.05);--am:#B45309;--am2:rgba(180,83,9,.06);--pp:#7C3AED;--mn:'IBM Plex Mono',monospace;--fn:'Plus Jakarta Sans',-apple-system,sans-serif;--radius:10px;--shadow:0 1px 3px rgba(0,0,0,.06)}
+[data-theme="dark"]{--bg:#0B0D12;--s1:#131720;--s2:#1B2030;--s3:#242A38;--brd:#2C3344;--brd2:#3A4358;--t:#C8CED8;--td:#8490A4;--tb:#EDF0F4;--ac:#6DA3F8;--ac2:rgba(109,163,248,.10);--ac3:rgba(109,163,248,.20);--gn:#34D399;--gn2:rgba(52,211,153,.10);--rd:#F87171;--rd2:rgba(248,113,113,.06);--am:#FBBF24;--am2:rgba(251,191,36,.08);--pp:#A78BFA;--shadow:0 1px 3px rgba(0,0,0,.3)}
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:var(--fn);background:var(--bg);color:var(--t);font-size:15px;line-height:1.6;transition:background .25s,color .25s}
+::selection{background:var(--ac3)}input,textarea,select{font-family:var(--fn);font-size:14px}
+textarea:focus,input:focus,select:focus{outline:none;border-color:var(--ac)!important;box-shadow:0 0 0 3px var(--ac2)}
+input::placeholder,textarea::placeholder{color:var(--td);opacity:.55}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulseDot{0%,80%,100%{opacity:.25;transform:scale(.8)}40%{opacity:1;transform:scale(1.2)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.card{background:var(--s1);border:1px solid var(--brd);border-radius:var(--radius);box-shadow:var(--shadow)}
+.btn{padding:10px 22px;border-radius:8px;border:none;font-family:var(--fn);font-size:14px;font-weight:600;cursor:pointer;transition:all .2s}
+.btn-p{background:var(--ac);color:#fff}.btn-p:hover{opacity:.9}.btn-p:disabled{opacity:.4;cursor:not-allowed}
+.btn-g{background:transparent;border:1px solid var(--brd);color:var(--td)}.btn-g:hover{border-color:var(--brd2);color:var(--tb)}
+.lbl{display:block;font-size:12px;font-weight:600;color:var(--td);letter-spacing:.03em;margin-bottom:6px;text-transform:uppercase;font-family:var(--mn)}
+.inp{width:100%;padding:10px 14px;background:var(--s2);border:1px solid var(--brd);border-radius:8px;color:var(--tb);font-size:14px;transition:border .2s,box-shadow .2s}
+textarea.inp{resize:vertical;line-height:1.6}select.inp{cursor:pointer}
+.tag{font-size:10px;font-family:var(--mn);letter-spacing:.05em;padding:3px 8px;border-radius:4px;font-weight:600;display:inline-block}
+.tag-b{color:var(--ac);background:var(--ac2);border:1px solid var(--ac3)}.tag-d{color:var(--td);background:var(--s2);border:1px solid var(--brd)}
+.ni{padding:10px 20px;font-size:14px;font-weight:500;color:var(--td);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;transition:all .15s;font-family:var(--fn)}
+.ni:hover{color:var(--tb)}.ni.a{color:var(--ac);border-bottom-color:var(--ac)}
+.sec{font-size:11px;font-family:var(--mn);color:var(--ac);letter-spacing:.05em;margin-bottom:14px;font-weight:600}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-thumb{background:var(--brd);border-radius:3px}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.26.5/babel.min.js"></script>
+<script type="text/babel">
+const{useState,useRef,useEffect}=React;const h=React.createElement;
+
+/* ══════════════════════════════════════════
+   DEFAULT SOLUTION REPOSITORY
+   ══════════════════════════════════════════ */
+const DEF_REPO=[
+  {id:"life-sciences-ai",name:"AI Capabilities Pathway: Life Sciences",summary:"Governed agentic operations across clinical study lifecycle. 6 agents: KB-Assisted Drafting, DocAudit (protocol quality gate), Document Alignment, Amendment Impact (knowledge graph), TMF Metadata Extraction, Inspection Readiness. Integrates Veeva Vault, IQVIA, Medidata, Oracle Clinical. Protocol review 30-90min saved/reviewer, dev time 25 to 10 weeks, 75% fewer inspection findings. 21 CFR Part 11, HIPAA, GDPR.",icp:"Pharma, CROs, biotech with clinical trials, protocol review, TMF burden, IRB delays",keywords:"clinical trials, pharma, biotech, CRO, protocol, IRB, FDA, life sciences, eTMF, Veeva, Medidata, consent, amendment, inspection, medical writing, regulatory"},
+  {id:"content-intelligence",name:"AI Capabilities Pathway: Content Intelligence",summary:"Content automation, syndication intelligence, UGC analysis. 1,900+ retailers, 90+ countries, 23 languages, 200M+ daily signals, 15ms latency. MP-NET embeddings, FAISS vectors. 95%+ matching accuracy. Financial content automation (45min to 5min).",icp:"Content syndication platforms, eCommerce/retail brands, media publishers, financial content providers",keywords:"content, syndication, ecommerce, retail, NLP, semantic matching, Neo4j, FAISS, UGC, sentiment, multi-language, publishing, media, personalization"},
+  {id:"preparing-legacy-for-ai",name:"Enterprise Transformation: Preparing Legacy for AI",summary:"API-led modernization of legacy systems (PowerBuilder, Oracle, Sybase, Pega, Informatica). AI accelerators: PB Shift, O2PIM, FormLift, JCT, S2PIM. 30-50% maintenance cost reduction, 40-60% timeline compression.",icp:"Enterprises with legacy estates facing high maintenance, skill scarcity, obsolescence",keywords:"legacy, modernization, PowerBuilder, Oracle, Sybase, Pega, Informatica, migration, PostgreSQL, API, monolithic, ETL, cloud migration, technical debt"},
+  {id:"preparing-data-for-ai",name:"Enterprise Transformation: Preparing Data for AI (Trusted Data Foundation)",summary:"Unified data foundation: discovery, ingestion, modeling, migration, governance. Medallion architecture. OLTP/OLAP split with CDC. Snowflake, Databricks, BigQuery. 5 AI agents for data engineering.",icp:"Enterprises with fragmented data, poor governance, AI blocked by data quality",keywords:"data engineering, Snowflake, Databricks, BigQuery, lakehouse, medallion, data governance, lineage, CDC, ETL, data silos, analytics"},
+  {id:"ai-squad-augmentation",name:"AI Squad Augmentation",summary:"Enterprise AI squads in days. Horizontal: Data Foundation, Enterprise Intelligence, AI-Led Modernisation. Vertical: Healthcare, Content, Supply Chain, Financial Ops. 52% cost savings, from $15/hr. SOC2/ISO27001/GDPR/HIPAA.",icp:"Enterprises needing AI/ML talent fast for POCs, MVPs, post-M&A, capability building",keywords:"squad, augmentation, staffing, AI talent, ML engineers, data engineers, hiring, scaling, POC, MVP, GenAI, LLM, RAG"},
+  {id:"supply-chain-intelligence",name:"AI Capabilities Pathway: Supply Chain Intelligence",summary:"Labour Management (3%+ OPEX reduction, $4.5M savings), Equipment (5% CAPEX reduction, 85-90% utilization), Revenue Leakage (1%+ reduction, $5M recovery), Inventory (10%+ cost reduction), Customer Service (30% admin reduction). 14-18 weeks.",icp:"Logistics, manufacturers, retailers, 3PL, asset-heavy operations",keywords:"supply chain, logistics, inventory, warehouse, forecasting, 3PL, manufacturing, operations, labour, equipment, revenue leakage"},
+  {id:"financial-intelligence",name:"AI Capabilities Pathway: Financial Operations Intelligence",summary:"Invoice/AP/AR (days to hours, 95%+ extraction), Contract Lifecycle (70% faster review), Expense Processing (5x faster), Compliance/ESG (GRI/SASB/TCFD). 12-16 weeks.",icp:"CFOs, finance teams processing 500+ invoices/month, ESG/compliance pressure",keywords:"finance, invoice, contract, compliance, SOX, audit, AP, AR, ESG, expense, billing, ERP, SAP, Oracle Financials, NetSuite"}
+];
+const ICONS={"life-sciences-ai":"🧬","content-intelligence":"📡","preparing-legacy-for-ai":"🏗️","preparing-data-for-ai":"🗄️","ai-squad-augmentation":"👥","supply-chain-intelligence":"📦","financial-intelligence":"💳"};
+
+/* ══════════════════════════════════════════
+   PROMPTS
+   ══════════════════════════════════════════ */
+const SYS_PROMPT=`You are an expert SDR Intelligence and Competitive Positioning Analyst. FULLY ANALYZE everything before generating outreach.
+
+HARD RULES:
+- NEVER use brand names (elsai, O2V, OptiSol, AI Foundry, iBEAM) in outreach. Use "our team", "our platform", "we have helped".
+- NEVER use em dash character anywhere in subject or body. Use commas, periods, or "..." instead.
+- CTA MUST always ask for a quick call or chat.
+- NEVER pitch a solution directly. Reference what you have done or seen from case studies as natural observation.
+- If user selected a preferred solution, ALWAYS evaluate it, but do NOT force a sales pitch if the account is a competitor or there is no signal-based fit. Independently determine the actual best-fit. If they differ, include betterFitSuggestion.
+- If user selected OTHER solution, prioritize the custom solution name, supporting link, and notes provided by the user. Base the output on those custom solution details and do not substitute a default Solution Library item unless the custom details are empty or clearly irrelevant.
+
+ANALYSIS (DO ALL 7 STEPS THOROUGHLY):
+
+STEP 0 - USER COMPANY CONTEXT: Use the user's company profile to understand who the seller is, their industry, website, and positioning. Do NOT treat this as the detailed offerings list. Detailed offerings, ICP, metrics, and case studies must come from the Solution Repository. Classify the target account relationship as one of: prospect, competitor, partner, customer, vendor, unknown. If the target company provides similar IT services, digital engineering, AI/data services, cloud/app modernization, or staffing services, treat it as a likely competitor unless evidence says otherwise.
+
+STEP 1 - TARGET COMPANY INTELLIGENCE: Extract from provided intel:
+- Industry and sub-industry
+- Company size and growth stage
+- Hiring patterns (what roles, how many, which departments)
+- Funding events or revenue signals
+- Technology stack and digital initiatives
+- Expansion signals (new markets, geographies, products)
+- Partnerships, acquisitions, or M&A activity
+- Organizational changes (new leadership, restructuring)
+- Regulatory or compliance pressures
+Convert to: business priorities, strategic direction, growth stage.
+
+STEP 2 - BUSINESS PROBLEMS: Infer 3-5 specific challenges. Each MUST trace to a signal from Step 1. Do NOT use generic problems like "data quality" unless there is a specific signal pointing to it.
+
+STEP 3 - PERSONA DEEP ANALYSIS: From role + LinkedIn details + LinkedIn research:
+- What they own (budget, team, outcomes)
+- What KPIs they are measured on
+- What keeps them up at night
+- Recent focus areas (from LinkedIn posts, career moves, stated interests)
+- How company problems from Step 2 specifically land on THEIR desk
+- Their decision-making authority level
+
+STEP 4 - SOLUTION MATCHING (CRITICAL - BE PRECISE):
+Match based on the INTERSECTION of: (a) company industry + signals, (b) inferred problems, (c) persona role + priorities.
+
+SPECIFICITY RULES:
+- Do NOT choose a broad horizontal solution just because no vertical solution fits.
+- Do NOT choose Preparing Data for AI as a default fallback. It is valid ONLY when the target intelligence explicitly mentions data fragmentation, governance, pipelines, analytics gaps, data platforms, BI modernization, lakehouse/warehouse, or AI blocked by data readiness.
+- If the target is an IT services, consulting, software development, cloud, AI/data services, or staffing company, first classify the account as competitor or partner candidate. In that case, prefer competitor-aware positioning or partnership context. Do NOT recommend Preparing Data for AI unless explicit internal data-platform pain exists.
+- If persona is HR, sales, marketing, procurement, operations, or leadership without solution-specific signals, say No strong match instead of forcing a solution.
+- Every recommendedSolution.signalMatch MUST name the exact source signals. If you cannot name them, return id "no-strong-match" and name "No strong match".
+
+MATCHING RULES:
+- Life Sciences AI: ONLY match if company is pharma, biotech, CRO, or runs clinical trials. Signals: protocol reviews, IRB submissions, clinical documentation, TMF, regulatory compliance.
+- Content Intelligence: ONLY match if company deals with content syndication, eCommerce product data, publishing, media distribution, or financial content automation.
+- Preparing Legacy for AI: ONLY match if company has specific legacy systems (PowerBuilder, Oracle Forms, Sybase, Pega, Informatica) mentioned in intel. Signals: legacy modernization, technical debt, migration plans.
+- Preparing Data for AI: ONLY match if there are EXPLICIT, concrete signals about data fragmentation, governance problems, data pipeline issues, analytics gaps, warehouse/lakehouse/BI modernization, CDC/ETL, or blocked AI initiatives due to data readiness. NEVER use it for generic IT services companies, generic digital transformation, generic AI interest, or when the only signal is that the company is technology-related.
+- AI Squad Augmentation: ONLY match if company is hiring AI/ML roles, building AI teams, running POCs, or has explicit signals about needing AI talent. Signals: AI hiring, team scaling, POC/MVP projects.
+- Supply Chain Intelligence: ONLY match if company is in logistics, manufacturing, retail, 3PL, or has supply chain operations. Signals: warehouse, inventory, shipping, demand forecasting, labour management, equipment.
+- Financial Operations Intelligence: ONLY match if persona is in finance, or company has high-volume invoice processing, contract management, or compliance/ESG reporting needs.
+
+If NO solution is a strong match based on actual signals, say "No strong match" and explain why. Do NOT force a match.
+If MULTIPLE solutions match, rank them by signal strength.
+
+STEP 5 - CASE STUDY MATCHING: Review matched solution metrics. Prepare ANONYMIZED reference if relevant ("a similar-sized logistics company" not the actual name). Skip if none fits naturally.
+
+STEP 6 - LINKEDIN PROFILE ANALYSIS: If LinkedIn details are provided, extract:
+- Career trajectory and expertise areas
+- Recent posts, articles, or activity themes
+- Stated skills and endorsements
+- Any personal interests or communication style cues
+Use these to personalize the outreach.
+
+STEP 7 - GENERATE OUTPUT using ALL analysis from steps 0-6. If relationship is competitor, do NOT create a normal sales pitch. Create competitor-aware positioning: concise opener, observed overlap, differentiation angle, and optional partnership-style CTA only if appropriate. If no strong solution match exists, explain no strong match and avoid generic data/AI pitches.
+
+EMAIL STRUCTURE (this exact order):
+1. OPENING (1-2 sentences): Company signal + persona role connection.
+2. PERSONA HOOK (1-2 sentences): Reference their LinkedIn focus, career detail, or how the challenge specifically hits their function.
+3. INSIGHT (2-3 sentences): Consultant-style observation about their specific challenge. Weave anonymized case study naturally if relevant. Do NOT pitch.
+4. CTA (1 sentence): Ask for a quick call or chat.
+
+LINKEDIN: 40-70 words. Persona reference + insight + CTA.
+CALL SCRIPT: Hook, context to persona, problem insight, case study if relevant, question for meeting.
+
+Return ONLY valid JSON:
+{"accountRelationship":{"type":"prospect|competitor|partner|customer|vendor|unknown","reason":"specific evidence from user company context and target company intel"},"companyIntelligence":{"signals":[...],"businessPriorities":[...],"growthStage":"...","industry":"..."},"inferredProblems":[...],"personaAnalysis":{"keyResponsibilities":[...],"painPoints":[...],"recentFocus":"...","decisionAuthority":"...","linkedInInsights":"key findings from their LinkedIn profile"},"recommendedSolution":{"id":"...","name":"...","reason":"2-3 sentences explaining WHY this solution matches the SPECIFIC signals found, not generic reasons","signalMatch":"which specific signals from step 1 led to this match"},"betterFitSuggestion":{"hasBetterFit":false,"id":"...or null","name":"...or null","reason":"...or null"},"alternativeSolutions":[{"id":"...","name":"...","reason":"..."}],"relevantCaseStudy":{"found":true,"anonymizedReference":"...","sourceMetric":"..."},"outreach":{"subject":"...","body":"...","type":"email|linkedin|call"}}`;
+
+const WEB_PROMPT=`Research the company thoroughly. Return ONLY JSON: {"companyOverview":"...","industry":"...","recentInitiatives":[...],"technologySignals":[...],"hiringPatterns":[...],"partnerships":[...],"expansionSignals":[...],"fullSummary":"200-300 word summary"}`;
+
+const DOC_PROMPT=`You are a solution analyst extracting structured data for an SDR outreach engine. The engine uses this data to match prospects to solutions based on company signals. Your extraction must be PRECISE and STRUCTURED so the matching works accurately.
+
+Extract from the uploaded documents and return ONLY valid JSON:
+
+{
+  "name": "Clear, concise solution name",
+
+  "summary": "300-400 word description structured as follows:
+    PARAGRAPH 1 - WHAT IT DOES: Core capability in 2-3 sentences. What problem does it solve? What does the platform/service actually do?
+    PARAGRAPH 2 - HOW IT WORKS: Architecture, key features, agents, layers, technology stack. Be specific about technical components.
+    PARAGRAPH 3 - INTEGRATIONS AND DEPLOYMENT: What systems it connects to (list specific platforms like SAP, Veeva, Salesforce etc). Deployment options and implementation timeline.
+    PARAGRAPH 4 - CASE STUDIES AND METRICS: Extract EVERY client outcome, proof point, and metric from the documents. Anonymize client names (use 'a mid-sized CRO', 'a global logistics company' etc) but PRESERVE all specific numbers: percentages, dollar amounts, time reductions, ROI figures, payback periods. These are critical for outreach.
+    PARAGRAPH 5 - DIFFERENTIATORS: What makes this different from generic solutions. Proprietary tools, accelerators, unique approaches.",
+
+  "icp": "Be very specific. Include:
+    - INDUSTRIES: Exact industries this targets (e.g. 'pharma and biotech running clinical trials' not just 'healthcare')
+    - COMPANY SIGNALS: What company signals indicate a fit? (e.g. 'hiring data engineers', 'running legacy PowerBuilder', 'expanding to new markets', 'post-M&A integration')
+    - JOB TITLES: Specific roles that would buy this (e.g. 'VP Clinical Operations', 'CTO', 'Head of Supply Chain')
+    - PAIN TRIGGERS: What specific problems trigger purchase? (e.g. 'IRB submission delays', 'legacy maintenance costs exceeding 40% of IT budget', '500+ invoices per month processed manually')
+    - NOT A FIT: What types of companies should NOT be matched to this (e.g. 'companies without clinical trial operations', 'companies not in manufacturing or logistics')",
+
+  "keywords": "30-40 comma-separated keywords optimized for signal matching. Include:
+    - INDUSTRY TERMS: Specific to the target vertical (e.g. 'clinical trials', 'IRB', 'protocol', 'eTMF' for life sciences)
+    - TECHNOLOGY NAMES: Platforms and tools prospects would use (e.g. 'Veeva Vault', 'SAP S/4HANA', 'PowerBuilder', 'Informatica')
+    - PAIN POINT PHRASES: Problems prospects face (e.g. 'legacy maintenance cost', 'data silos', 'manual invoice processing')
+    - ROLE KEYWORDS: Terms from job titles of buyers (e.g. 'clinical operations', 'supply chain director', 'CFO')
+    - COMPETITOR/ALTERNATIVE NAMES: Tools or vendors prospects might currently use
+    Do NOT include generic terms like 'AI', 'digital transformation', 'innovation' that match everything"
+}
+
+CRITICAL: The keywords and ICP fields are used by the matching engine to determine which solution fits a prospect. If these are too generic (e.g. 'any enterprise', 'data', 'AI'), the engine will incorrectly match this solution to every prospect. Be as SPECIFIC and NARROW as the documents support.`;
+
+/* ══════════════════════════════════════════
+   UNIVERSAL API CALLER
+   Supports: Anthropic, OpenAI, Gemini, or
+   any OpenAI-compatible endpoint
+   ══════════════════════════════════════════ */
+const PRESETS={
+  gemini:{name:"Google Gemini",url:"https://generativelanguage.googleapis.com/v1beta",model:"gemini-2.5-flash-lite",keyPlaceholder:"AIza...",keyHelp:"https://aistudio.google.com/apikey",supportsPDF:true,free:true},
+  groq:{name:"Groq",url:"https://api.groq.com/openai/v1/chat/completions",model:"llama-3.1-8b-instant",keyPlaceholder:"gsk_...",keyHelp:"https://console.groq.com/keys",supportsPDF:false,free:true},
+  openrouter:{name:"OpenRouter",url:"https://openrouter.ai/api/v1/chat/completions",model:"meta-llama/llama-3.1-8b-instruct:free",keyPlaceholder:"sk-or-...",keyHelp:"https://openrouter.ai/keys",supportsPDF:false,free:true},
+  cloudflare:{name:"Cloudflare Workers AI",url:"https://api.cloudflare.com/client/v4/accounts",model:"@cf/meta/llama-3.1-8b-instruct",keyPlaceholder:"Bearer token...",keyHelp:"Cloudflare Dashboard → AI → Workers AI → Use REST API",supportsPDF:false,needsAccountId:true,free:true},
+  anthropic:{name:"Anthropic (Claude)",url:"https://api.anthropic.com/v1/messages",model:"claude-sonnet-4-20250514",keyPlaceholder:"sk-ant-...",keyHelp:"https://console.anthropic.com",supportsPDF:true},
+  openai:{name:"OpenAI (GPT-4o)",url:"https://api.openai.com/v1/chat/completions",model:"gpt-4o",keyPlaceholder:"sk-...",keyHelp:"https://platform.openai.com/api-keys",supportsPDF:false},
+  custom:{name:"Custom (OpenAI-compatible)",url:"",model:"",keyPlaceholder:"your-api-key",keyHelp:"Use any OpenAI-compatible API endpoint",supportsPDF:false}
+};
+
+/* ══════════════════════════════════════════
+   UNIVERSAL API CALLER with CORS proxy
+   ══════════════════════════════════════════ */
+const CORS_PROXIES=[
+  'https://corsproxy.io/?url=',
+  'https://api.allorigins.win/raw?url='
+];
+
+function proxyUrl(url,useProxy){
+  if(!useProxy) return url;
+  return CORS_PROXIES[0]+encodeURIComponent(url);
+}
+
+async function callAIOnce(cfg,{system,userContent},retries=2){
+  const delay=ms=>new Promise(r=>setTimeout(r,ms));
+  for(let attempt=1;attempt<=retries;attempt++){
+    try{
+      let text='';
+      if(cfg.provider==='anthropic'){
+        const body={model:cfg.model,max_tokens:2000,system,messages:[{role:"user",content:userContent}]};
+        const r=await fetch(proxyUrl(cfg.url,cfg.useProxy),{method:"POST",headers:{"Content-Type":"application/json","x-api-key":cfg.key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify(body)});
+        const d=await r.json();if(d.error) throw new Error(d.error.message);
+        text=(d.content||[]).map(b=>b.text||"").filter(Boolean).join("\n");
+      } else if(cfg.provider==='gemini'){
+        const fullUrl=`${cfg.url}/models/${cfg.model}:generateContent?key=${cfg.key}`;
+        const body={system_instruction:{parts:[{text:system}]},contents:[{parts:Array.isArray(userContent)?userContent:[{text:typeof userContent==='string'?userContent:JSON.stringify(userContent)}]}]};
+        const r=await fetch(proxyUrl(fullUrl,cfg.useProxy),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+        const d=await r.json();if(d.error) throw new Error(d.error.message);
+        text=d.candidates?.[0]?.content?.parts?.[0]?.text||'';
+      } else if(cfg.provider==='cloudflare'){
+        if(!cfg.cfAccountId) throw new Error('Cloudflare Account ID is required. Add it in the API Key tab.');
+        const fullUrl=`${cfg.url}/${cfg.cfAccountId}/ai/run/${cfg.model}`;
+        const msgs=[{role:"system",content:system},{role:"user",content:typeof userContent==='string'?userContent:JSON.stringify(userContent)}];
+        const r=await fetch(proxyUrl(fullUrl,cfg.useProxy),{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${cfg.key}`},body:JSON.stringify({messages:msgs})});
+        const d=await r.json();if(d.errors?.length) throw new Error(d.errors.map(x=>x.message).join('; '));if(d.error) throw new Error(d.error.message||JSON.stringify(d.error));
+        text=d.result?.response||d.result?.content||d.result?.text||'';
+      } else {
+        const msgs=[{role:"system",content:system},{role:"user",content:typeof userContent==='string'?userContent:JSON.stringify(userContent)}];
+        const headers={"Content-Type":"application/json","Authorization":`Bearer ${cfg.key}`};
+        if(cfg.provider==='openrouter'){headers["HTTP-Referer"]=location.origin;headers["X-Title"]='SDR Engine'}
+        const r=await fetch(proxyUrl(cfg.url,cfg.useProxy),{method:"POST",headers,body:JSON.stringify({model:cfg.model,messages:msgs,max_tokens:2000})});
+        const d=await r.json();if(d.error) throw new Error(d.error.message||JSON.stringify(d.error));
+        text=d.choices?.[0]?.message?.content||'';
+      }
+      return text;
+    }catch(e){
+      const msg=e.message||'';
+      // If Failed to fetch and proxy not enabled, suggest enabling it
+      if(msg.includes('Failed to fetch')&&!cfg.useProxy){
+        throw new Error('Failed to fetch. This is likely a CORS error. Go to API Key tab and enable "Use CORS Proxy" toggle, then try again.');
+      }
+      if(attempt<retries&&(msg.includes('high demand')||msg.includes('overloaded')||msg.includes('RESOURCE_EXHAUSTED')||msg.includes('rate')||msg.includes('429')||msg.includes('503'))){
+        await delay(attempt*3000);continue;
+      }
+      throw e;
+    }
+  }
+}
+
+async function callAI(cfg,args,retries=2){
+  const failoverMessages=['rate','429','quota','limit','RESOURCE_EXHAUSTED','insufficient_quota','credit','billing','overloaded','high demand','503','500','timeout','Failed to fetch'];
+  const wantsPdf=JSON.stringify(args.userContent||'').includes('application/pdf')||JSON.stringify(args.userContent||'').includes('inlineData');
+  const list=(cfg.apiKeys&&cfg.apiKeys.length?cfg.apiKeys:[{id:'legacy',label:PRESETS[cfg.provider]?.name||cfg.provider,provider:cfg.provider,key:cfg.key,url:cfg.url,model:cfg.model,cfAccountId:cfg.cfAccountId,enabled:true}]).filter(k=>(k.enabled!==false)&&k.key&&(!wantsPdf||k.provider==='gemini'||k.provider==='anthropic'));
+  if(!list.length) throw new Error('No enabled API keys found. Add at least one key in the API Key tab.');
+  const ordered=[...list].sort((a,b)=>(a.lastFailedAt||0)-(b.lastFailedAt||0));
+  let lastErr=null;
+  for(const k of ordered){
+    const single={...cfg,...k,provider:k.provider||cfg.provider,url:k.url||PRESETS[k.provider||cfg.provider]?.url||cfg.url,model:k.model||PRESETS[k.provider||cfg.provider]?.model||cfg.model,cfAccountId:k.cfAccountId||cfg.cfAccountId};
+    try{
+      const out=await callAIOnce(single,args,retries);
+      k.lastUsedAt=Date.now();k.lastError='';k.successCount=(k.successCount||0)+1;
+      return out;
+    }catch(e){
+      lastErr=e;const msg=e.message||'';k.lastFailedAt=Date.now();k.lastError=msg.slice(0,160);
+      if(!failoverMessages.some(x=>msg.toLowerCase().includes(x.toLowerCase()))) break;
+    }
+  }
+  throw new Error((lastErr?.message||'All API keys failed')+' | Tried '+ordered.map(k=>k.label||PRESETS[k.provider]?.name||k.provider).join(' -> '));
+}
+
+async function readPDF(f){return new Promise((r,j)=>{const x=new FileReader();x.onload=()=>r(x.result.split(",")[1]);x.onerror=()=>j(new Error("Read failed"));x.readAsDataURL(f)})}
+function Dots(){return h('span',{style:{display:"inline-flex",gap:3}},[0,1,2].map(i=>h('span',{key:i,style:{width:5,height:5,borderRadius:"50%",background:"var(--ac)",display:"inline-block",animation:`pulseDot 1.2s ease-in-out ${i*.2}s infinite`}})))}
+
+/* ══════════════════════════════════════════
+   COMPANY PROFILE
+   ══════════════════════════════════════════ */
+function CompanyProfile({myCompany,setMyCompany,repo,hasKeys,setPage}){
+  return h('div',{style:{animation:'fadeUp .4s'}},
+    h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,flexWrap:'wrap',gap:12}},
+      h('div',null,
+        h('h2',{style:{fontSize:20,fontWeight:700,color:'var(--tb)'}},'Your Company Profile'),
+        h('p',{style:{fontSize:14,color:'var(--td)',marginTop:4,lineHeight:1.6}},'Saved company context. The SDR Engine uses this automatically for every output until you manually change it.')
+      ),
+      h('button',{className:'btn btn-p',onClick:()=>setPage('engine')},'Go to SDR Engine')
+    ),
+    h('div',{className:'card',style:{padding:24,marginBottom:16,border:'1.5px solid var(--ac3)',background:'var(--ac2)'}},
+      h('div',{className:'sec'},'SELLER CONTEXT'),
+      h('div',{className:'row',style:{marginBottom:12}},
+        h('div',null,h('label',{className:'lbl'},'COMPANY NAME'),h('input',{className:'inp',value:myCompany.name||'',onChange:e=>setMyCompany({...myCompany,name:e.target.value}),placeholder:'OptiSol Business Solutions'})),
+        h('div',null,h('label',{className:'lbl'},'WEBSITE'),h('input',{className:'inp',value:myCompany.website||'',onChange:e=>setMyCompany({...myCompany,website:e.target.value}),placeholder:'https://www.optisolbusiness.com'}))
+      ),
+      h('div',{style:{marginBottom:12}},
+        h('label',{className:'lbl'},'INDUSTRY'),
+        h('input',{className:'inp',value:myCompany.industry||'',onChange:e=>setMyCompany({...myCompany,industry:e.target.value}),placeholder:'IT Services & Consulting'})
+      ),
+      h('label',{className:'lbl'},'POSITIONING'),
+      h('textarea',{className:'inp',rows:7,value:myCompany.positioning||myCompany.notes||'',onChange:e=>setMyCompany({...myCompany,positioning:e.target.value}),placeholder:'High-level seller positioning. Keep detailed offerings inside Solution Library.'}),
+      h('p',{style:{fontSize:12,color:'var(--td)',marginTop:10,lineHeight:1.6}},'Tip: keep this high-level. The Solution Library remains the source of truth for offerings, ICP, proof points, and case studies.')
+    ),
+    h('div',{style:{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12}},
+      h('div',{className:'card',style:{padding:16}},h('div',{className:'tag tag-b'},'COMPANY'),h('div',{style:{fontSize:15,fontWeight:700,color:'var(--tb)',marginTop:10}},myCompany.name||'Not set'),h('div',{style:{fontSize:12,color:'var(--td)',marginTop:4}},myCompany.website||'No website')),
+      h('div',{className:'card',style:{padding:16}},h('div',{className:'tag tag-b'},'SOLUTIONS'),h('div',{style:{fontSize:15,fontWeight:700,color:'var(--tb)',marginTop:10}},repo.length+' loaded'),h('div',{style:{fontSize:12,color:'var(--td)',marginTop:4}},'Managed in Solution Library')),
+      h('div',{className:'card',style:{padding:16}},h('div',{className:'tag tag-b'},'AI ENGINE'),h('div',{style:{fontSize:15,fontWeight:700,color:'var(--tb)',marginTop:10}},hasKeys?'Configured':'Needs setup'),h('div',{style:{fontSize:12,color:'var(--td)',marginTop:4}},hasKeys?'Ready for generation':'Add API key before running'))
+    )
+  );
+}
+
+/* ══════════════════════════════════════════
+   DOCUMENT MANAGER
+   ══════════════════════════════════════════ */
+function DocManager({repo,setRepo,editId,setEditId,cfg}){
+  const[files,setFiles]=useState({});const[notes,setNotes]=useState({});const[proc,setProc]=useState(null);const[ps,setPs]=useState('');
+  function addSol(){const n={id:`c-${Date.now()}`,name:'',summary:'',icp:'',keywords:''};setRepo(r=>[...r,n]);setEditId(n.id)}
+  function addFiles(sid,nf){setFiles(f=>({...f,[sid]:[...(f[sid]||[]),...[...nf].map(fi=>({file:fi,name:fi.name,size:fi.size}))]}))}
+  function rmFile(sid,i){setFiles(f=>{const a=[...(f[sid]||[])];a.splice(i,1);return{...f,[sid]:a}})}
+  async function process(sid){
+    const sf=files[sid]||[],sn=notes[sid]||'',item=repo.find(x=>x.id===sid);
+    if(!sf.length&&!sn){alert('Upload files or add notes first.');return}
+    if(!cfg.hasKeys){alert('Add at least one enabled API key first.');return}
+    setProc(sid);setPs('Reading files...');
+    try{
+      let all='';
+      for(let i=0;i<sf.length;i++){
+        setPs(`Reading ${i+1}/${sf.length}: ${sf[i].name}`);
+        if(sf[i].name.endsWith('.pdf')&&(cfg.apiKeys||[]).some(k=>k.enabled!==false&&k.key&&(k.provider==='anthropic'||k.provider==='gemini'))){
+          const b64=await readPDF(sf[i].file);
+          if((cfg.apiKeys||[]).some(k=>k.enabled!==false&&k.key&&k.provider==='anthropic')){
+            all+='\n\n---'+sf[i].name+'---\n'+await callAI({...cfg,apiKeys:(cfg.apiKeys||[]).filter(k=>k.enabled!==false&&k.key&&k.provider==='anthropic')},{system:"Extract all text. Return plain text.",userContent:[{type:"document",source:{type:"base64",media_type:"application/pdf",data:b64}},{type:"text",text:"Extract all text."}]});
+          }else{
+            all+='\n\n---'+sf[i].name+'---\n'+await callAI({...cfg,apiKeys:(cfg.apiKeys||[]).filter(k=>k.enabled!==false&&k.key&&k.provider==='gemini')},{system:"Extract all text from this PDF. Return plain text.",userContent:[{inlineData:{mimeType:"application/pdf",data:b64}},{text:"Extract all text."}]});
+          }
+        }else if(sf[i].name.endsWith('.html')){
+          const t=await sf[i].file.text();all+='\n\n---'+sf[i].name+'---\n'+t.replace(/<style[\s\S]*?<\/style>/gi,'').replace(/<script[\s\S]*?<\/script>/gi,'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0,8000);
+        }else{all+='\n\n---'+sf[i].name+'---\n'+(await sf[i].file.text()).slice(0,8000)}
+      }
+      if(sn) all+='\n\n---NOTES---\n'+sn;
+      setPs('AI analyzing...');
+      const nh=item.name&&item.name!==''?`\nSolution: "${item.name}".`:'';
+      const raw=await callAI(cfg,{system:DOC_PROMPT,userContent:`Analyze these documents for an SDR outreach matching engine. Extract structured solution profile with precise ICP, specific keywords, all case studies with metrics, and clear industry targeting. Avoid generic descriptions.${nh}\n\nDOCUMENTS:\n${all}`});
+      const p=JSON.parse(raw.replace(/```json|```/g,'').trim());
+      setRepo(r=>r.map(x=>x.id===sid?{...x,name:p.name||x.name,summary:p.summary||'',icp:p.icp||'',keywords:p.keywords||'',fileCount:sf.length,processed:true}:x));
+      setPs('Done!');setTimeout(()=>setProc(null),1500);
+    }catch(e){alert('Error: '+e.message);setProc(null)}
+  }
+  return h('div',{style:{animation:'fadeUp .4s'}},
+    h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,flexWrap:'wrap',gap:12}},
+      h('div',null,h('h2',{style:{fontSize:20,fontWeight:700,color:'var(--tb)'}},'Solution Library'),h('p',{style:{fontSize:14,color:'var(--td)',marginTop:4}},'Manage reusable offerings, ICP signals, case studies, and proof points. These stay saved until you edit them.')),
+      h('div',{style:{display:'flex',gap:8}},h('button',{className:'btn btn-g',onClick:()=>{if(confirm('Reset solution library to defaults?')){setRepo(DEF_REPO);setEditId(null);setFiles({});setNotes({})}}},'Reset'),h('button',{className:'btn btn-p',onClick:addSol},'+ Add Solution'))
+    ),
+    repo.map(item=>{const isE=editId===item.id,sf=files[item.id]||[],sn=notes[item.id]||'',isP=proc===item.id;
+      return h('div',{key:item.id,className:'card',style:{marginBottom:12,overflow:'hidden'}},
+        !isE&&h('div',{style:{padding:'16px 20px',display:'flex',justifyContent:'space-between',alignItems:'center',cursor:'pointer'},onClick:()=>setEditId(item.id)},
+          h('div',{style:{display:'flex',alignItems:'center',gap:10,flex:1,minWidth:0}},h('span',{style:{fontSize:20,flexShrink:0}},ICONS[item.id]||'⚡'),h('div',{style:{minWidth:0}},h('div',{style:{fontSize:15,fontWeight:600,color:'var(--tb)'}},item.name||'Untitled'),h('div',{style:{display:'flex',gap:6,marginTop:4,flexWrap:'wrap'}},item.processed&&h('span',{className:'tag',style:{fontSize:10,color:'var(--gn)',background:'var(--gn2)',border:'1px solid rgba(5,150,105,.2)'}},'✓ Processed'),item.summary&&h('span',{className:'tag tag-d',style:{fontSize:10}},'Has description')))),
+          h('span',{style:{fontSize:12,color:'var(--td)',fontFamily:'var(--mn)',flexShrink:0,marginLeft:12}},'Edit →')),
+        isE&&h('div',{style:{padding:24}},
+          h('label',{className:'lbl'},'SOLUTION NAME'),h('input',{className:'inp',value:item.name,onChange:e=>{const v=e.target.value;setRepo(r=>r.map(x=>x.id===item.id?{...x,name:v}:x))},placeholder:'e.g. Life Sciences AI',style:{marginBottom:16}}),
+          h('label',{className:'lbl'},'SOURCE MATERIALS (service decks, case studies, product pages, metrics, etc.)'),
+          h('div',{onClick:()=>{const inp=document.createElement('input');inp.type='file';inp.accept='.pdf,.html,.txt,.md,.csv';inp.multiple=true;inp.onchange=ev=>{if(ev.target.files?.length)addFiles(item.id,[...ev.target.files])};inp.click()},style:{padding:'24px 20px',borderRadius:8,border:'2px dashed var(--brd)',background:'var(--s2)',cursor:'pointer',textAlign:'center',marginBottom:12}},h('div',{style:{fontSize:22,marginBottom:6}},'📁'),h('div',{style:{fontSize:13,color:'var(--td)'}},'Click to upload (PDF, HTML, TXT, MD). Add as many files as possible.')),
+          sf.length>0&&h('div',{style:{marginBottom:14}},sf.map((f,i)=>h('div',{key:i,style:{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'8px 12px',background:'var(--s2)',border:'1px solid var(--brd)',borderRadius:6,marginBottom:4}},h('div',{style:{display:'flex',alignItems:'center',gap:8}},h('span',{style:{fontSize:14}},f.name.endsWith('.pdf')?'📄':'📝'),h('span',{style:{fontSize:13,color:'var(--tb)'}},f.name)),h('button',{onClick:ev=>{ev.stopPropagation();rmFile(item.id,i)},style:{background:'none',border:'none',color:'var(--rd)',cursor:'pointer',fontSize:16}},'×')))),
+          h('label',{className:'lbl'},'MATCHING INTELLIGENCE (OPTIONAL)'),h('textarea',{className:'inp',rows:4,value:sn,onChange:e=>setNotes(n=>({...n,[item.id]:e.target.value})),placeholder:'Help the engine match accurately. Add:\n- Which SPECIFIC industries is this for? (not "any enterprise")\n- What company signals indicate a fit? (e.g. "hiring data engineers", "running Oracle Forms")\n- What job titles buy this? (e.g. "VP Clinical Ops", "CFO")\n- Key metrics/case studies to reference in outreach\n- What companies should NOT be matched to this?',style:{marginBottom:16}}),
+          h('div',{style:{padding:'14px 0',borderTop:'1px solid var(--brd)',borderBottom:'1px solid var(--brd)',marginBottom:16}},isP?h('div',{style:{display:'flex',alignItems:'center',gap:10}},h('div',{style:{width:18,height:18,border:'2px solid var(--ac)',borderTopColor:'transparent',borderRadius:'50%',animation:'spin .8s linear infinite'}}),h('span',{style:{fontSize:14,color:'var(--ac)',fontWeight:500}},ps)):h('button',{className:'btn btn-p',onClick:()=>process(item.id),disabled:!cfg.hasKeys,style:{width:'100%'}},(sf.length>0||sn)?`🤖 Process with AI (${sf.length} files)`:'Upload files first')),
+          item.summary&&h('div',{style:{marginBottom:14}},h('label',{className:'lbl'},'SOLUTION DESCRIPTION (includes case studies)'),h('textarea',{className:'inp',rows:7,value:item.summary,onChange:e=>{const v=e.target.value;setRepo(r=>r.map(x=>x.id===item.id?{...x,summary:v}:x))}})),
+          item.icp&&h('div',{style:{marginBottom:14}},h('label',{className:'lbl'},'ICP'),h('textarea',{className:'inp',rows:2,value:item.icp,onChange:e=>{const v=e.target.value;setRepo(r=>r.map(x=>x.id===item.id?{...x,icp:v}:x))}})),
+          item.keywords&&h('div',{style:{marginBottom:16}},h('label',{className:'lbl'},'KEYWORDS'),h('textarea',{className:'inp',rows:2,value:item.keywords,onChange:e=>{const v=e.target.value;setRepo(r=>r.map(x=>x.id===item.id?{...x,keywords:v}:x))}})),
+          h('div',{style:{display:'flex',gap:8}},h('button',{className:'btn btn-p',onClick:()=>setEditId(null)},'Done'),h('button',{className:'btn btn-g',style:{marginLeft:'auto',color:'var(--rd)',borderColor:'rgba(220,38,38,.3)'},onClick:()=>{if(confirm('Delete?')){setRepo(r=>r.filter(x=>x.id!==item.id));setEditId(null)}}},'Delete'))
+        )
+      )
+    })
+  );
+}
+
+/* ══════════════════════════════════════════
+   MAIN APP
+   ══════════════════════════════════════════ */
+function App(){
+  const[theme,setTheme]=useState(()=>localStorage.getItem('sdr-theme')||'light');
+  const[page,setPage]=useState('company');
+  // API config
+  const[apiKeys,setApiKeys]=useState(()=>[{id:"k-"+Date.now(),label:"Gemini Main",provider:"gemini",key:"",url:PRESETS.gemini.url,model:PRESETS.gemini.model,cfAccountId:"",enabled:true}]);
+  const[editingKey,setEditingKey]=useState(null);
+  const[keyVis,setKeyVis]=useState({});
+  const[useProxy,setUseProxy]=useState(()=>localStorage.getItem('sdr-proxy')==='true');
+  // Repo
+  const[repo,setRepo]=useState(()=>{try{return JSON.parse(localStorage.getItem('sdr-repo'))||DEF_REPO}catch{return DEF_REPO}});
+const DEFAULT_MY_COMPANY={name:'OptiSol Business Solutions',website:'https://www.optisolbusiness.com',industry:'IT Services & Consulting',positioning:"OptiSol Business Solutions is a global IT services and digital engineering firm with 450+ experts across the US, UK, India, Australia, and UAE. With 15+ years of experience, OptiSol helps enterprises and tech-forward companies build, modernize, and scale intelligent digital solutions. Positioning should emphasize personalized IT services combined with GenAI accelerators, applied Generative AI, product engineering, cloud, data, legacy modernization, and enterprise AI. Use this profile only as seller context. Do not duplicate detailed offerings here, solution-level offerings are maintained in the Solution Library. When the target company is also an IT services, digital engineering, AI/data services, cloud/app modernization, or staffing provider, treat it as a likely competitor and generate competitor-aware intelligence or positioning instead of generic prospecting outreach."};
+  const[myCompany,setMyCompany]=useState(()=>{try{const saved=JSON.parse(localStorage.getItem('sdr-my-company')||'{}')||{};return {...DEFAULT_MY_COMPANY,...saved,positioning:saved.positioning||saved.notes||DEFAULT_MY_COMPANY.positioning}}catch{return DEFAULT_MY_COMPANY}});
+  const companyProfile=`Company Name: ${myCompany.name||'N/A'}\nWebsite: ${myCompany.website||'N/A'}\nIndustry: ${myCompany.industry||'N/A'}\nPositioning: ${myCompany.positioning||myCompany.notes||'N/A'}`;
+  const[editId,setEditId]=useState(null);
+  // Engine
+  const[cn,setCn]=useState('');const[ws,setWs]=useState('');
+  const[useWeb,setUseWeb]=useState(false);const[it,setIt]=useState('');const[ifl,setIfl]=useState(null);
+  const[ai,setAi]=useState('');const[pn,setPn]=useState('');const[rl,setRl]=useState('');
+  const[li,setLi]=useState('');const[liUrl,setLiUrl]=useState('');const[liRes,setLiRes]=useState(null);const[ot,setOt]=useState('email');const[selSol,setSelSol]=useState('auto');
+  const[otherSolName,setOtherSolName]=useState('');const[otherSolLink,setOtherSolLink]=useState('');const[otherSolDetails,setOtherSolDetails]=useState('');
+  const[ld,setLd]=useState(false);const[ph,setPh]=useState('');const[st,setSt]=useState(0);
+  const[res,setRes]=useState(null);const[wr,setWr]=useState(null);const[pdfRes,setPdfRes]=useState(null);const[err,setErr]=useState(null);
+  const[tab,setTab]=useState('outreach');const[cp,setCp]=useState(false);
+  const rr=useRef(null);const fr=useRef(null);
+
+  const hasKeys=apiKeys.some(k=>(k.enabled!==false)&&k.key);
+  const cfg={apiKeys,hasKeys,useProxy};
+
+  useEffect(()=>{document.documentElement.setAttribute('data-theme',theme);localStorage.setItem('sdr-theme',theme)},[theme]);
+  useEffect(()=>{localStorage.removeItem("sdr-key");localStorage.removeItem("sdr-api-keys");localStorage.setItem("sdr-proxy",useProxy)},[apiKeys,useProxy]);
+  useEffect(()=>{localStorage.setItem('sdr-repo',JSON.stringify(repo))},[repo]);
+  useEffect(()=>{localStorage.setItem('sdr-my-company',JSON.stringify(myCompany))},[myCompany]);
+
+  function addApiKey(p='gemini'){
+    const pr=PRESETS[p];const n={id:'k-'+Date.now(),label:pr.name,provider:p,key:'',url:pr.url,model:pr.model,cfAccountId:'',enabled:true};
+    setApiKeys(a=>[...a,n]);setEditingKey(n.id);
+  }
+  function updateApiKey(id,patch){setApiKeys(a=>a.map(k=>k.id===id?{...k,...patch}:k))}
+  function deleteApiKey(id){setApiKeys(a=>a.filter(k=>k.id!==id));if(editingKey===id)setEditingKey(null)}
+
+
+  const rs=["Gathering intelligence","Compiling sources"];
+  const as=["Analyzing signals","Inferring problems","Mapping persona","Matching solutions","Crafting outreach"];
+  const steps=ph==='r'?rs:as;
+  useEffect(()=>{if(!ld)return;const iv=setInterval(()=>setSt(s=>s<steps.length-1?s+1:s),ph==='r'?4000:3200);return()=>clearInterval(iv)},[ld,ph,steps.length]);
+
+  const hasOtherSolution=selSol==='other'&&otherSolName.trim()&&(otherSolLink.trim()||otherSolDetails.trim());
+  const ok=cn&&pn&&rl&&hasKeys&&myCompany.name&&myCompany.industry&&(useWeb||it||ifl)&&(selSol!=='other'||hasOtherSolution);
+
+  async function run(){
+    setLd(true);setErr(null);setRes(null);setWr(null);setPdfRes(null);setLiRes(null);setCp(false);
+    try{
+      let intel='';
+      if(it) intel+=it;
+      // PDF
+      if(ifl){
+        setPh('r');setSt(0);
+        let pdfText='';
+        if((cfg.apiKeys||[]).some(k=>k.enabled!==false&&k.key&&k.provider==='anthropic')){
+          const b=await readPDF(ifl);
+          pdfText=await callAI({...cfg,apiKeys:(cfg.apiKeys||[]).filter(k=>k.enabled!==false&&k.key&&k.provider==='anthropic')},{system:"Extract all text from this PDF. Return plain text preserving all company details, initiatives, financials, hiring info, technology mentions, and any other business intelligence.",userContent:[{type:"document",source:{type:"base64",media_type:"application/pdf",data:b}},{type:"text",text:"Extract all company intelligence from this document. Be thorough."}]});
+        }else if((cfg.apiKeys||[]).some(k=>k.enabled!==false&&k.key&&k.provider==='gemini')){
+          const b=await readPDF(ifl);
+          pdfText=await callAI({...cfg,apiKeys:(cfg.apiKeys||[]).filter(k=>k.enabled!==false&&k.key&&k.provider==='gemini')},{system:"Extract all text from this PDF. Return plain text preserving all company details, initiatives, financials, hiring info, technology mentions, and any other business intelligence.",userContent:[{inlineData:{mimeType:"application/pdf",data:b}},{text:"Extract all company intelligence from this document. Be thorough."}]});
+        }else{
+          throw new Error("PDF upload not supported with this provider. Paste the text instead.");
+        }
+        setPdfRes(pdfText);
+        intel+=(intel?'\n\n---FROM PDF---\n':'')+pdfText;
+      }
+      // Web research
+      if(useWeb){
+        setPh('r');setSt(0);
+        const raw=await callAI(cfg,{system:WEB_PROMPT,userContent:`Research: ${cn}\nWebsite: ${ws||'N/A'}\nSearch the web and return comprehensive intelligence.`});
+        try{const p=JSON.parse(raw.replace(/```json|```/g,'').trim());intel+=(intel?'\n\n---FROM WEB---\n':'')+(p.fullSummary||raw);setWr(p)}catch{intel+=(intel?'\n\n---FROM WEB---\n':'')+raw}
+      }
+      if(ai) intel+='\n\n---ADDITIONAL INTEL---\n'+ai;
+      if(!intel.trim()) throw new Error("No company intelligence. Paste text, upload PDF, or enable web research.");
+
+      // LinkedIn research
+      let personIntel=li||'';
+      if(liUrl){
+        setPh('r');setSt(0);
+        const liRaw=await callAI(cfg,{system:`Research this LinkedIn profile. Return a summary of: their current role and responsibilities, career history, key skills, recent posts or activity, areas of focus, education. Return ONLY JSON: {"name":"...","currentRole":"...","company":"...","careerSummary":"...","keySkills":[...],"recentFocus":"...","education":"...","fullSummary":"150-200 word professional summary"}`,userContent:`Research this person's LinkedIn profile: ${liUrl}\nPerson name: ${pn}\nRole: ${rl}\nFind details about their professional background, expertise, and recent activity.`});
+        try{
+          const p=JSON.parse(liRaw.replace(/```json|```/g,'').trim());
+          setLiRes(p);
+          personIntel+=(personIntel?'\n\n':'')+p.fullSummary;
+        }catch{
+          setLiRes({fullSummary:liRaw});
+          personIntel+=(personIntel?'\n\n':'')+liRaw;
+        }
+      }
+
+      setPh('a');setSt(0);
+      const solNote=selSol==='other'?`\n\nUSER SELECTED OTHER SOLUTION:\nName: ${otherSolName||'N/A'}\nSupporting Link: ${otherSolLink||'N/A'}\nUser Notes / Details: ${otherSolDetails||'N/A'}\nGenerate the ${ot} based on this custom solution context. Use the supporting link and details as the primary solution source. Still evaluate account relationship and avoid forcing a pitch if the account is a competitor or not a fit.`:(selSol!=='auto'?`\n\nUSER SELECTED SOLUTION: ${repo.find(x=>x.id===selSol)?.name||selSol}. Generate outreach for this. Also determine actual best-fit independently.`:'');
+      const raw=await callAI(cfg,{system:SYS_PROMPT,userContent:`YOUR COMPANY CONTEXT:\n${companyProfile||'N/A'}\n\nTARGET COMPANY: ${cn}\nWEBSITE: ${ws||'N/A'}\nTARGET COMPANY INTELLIGENCE:\n${intel}\n\nTARGET PERSON: ${pn}\nROLE: ${rl}\nLINKEDIN PROFILE URL: ${liUrl||'N/A'}\nLINKEDIN DETAILS:\n${personIntel||'N/A'}\n\nOUTPUT TYPE: ${ot}${solNote}\n\nSOLUTION REPOSITORY:\n${JSON.stringify(repo)}\n\nAnalyze fully. Match the MOST SPECIFIC solution. Return JSON only.`});
+      setRes(JSON.parse(raw.replace(/```json|```/g,'').trim()));setTab('outreach');
+      setTimeout(()=>rr.current?.scrollIntoView({behavior:'smooth',block:'start'}),250);
+    }catch(e){setErr(e.message)}finally{setLd(false);setPh('')}
+  }
+
+  function copy(){if(!res?.outreach)return;const t=res.outreach.subject?`Subject: ${res.outreach.subject}\n\n${res.outreach.body}`:res.outreach.body;navigator.clipboard.writeText(t);setCp(true);setTimeout(()=>setCp(false),2000)}
+
+  return h('div',{style:{minHeight:'100vh',background:'var(--bg)',transition:'background .25s'}},
+    // Header
+    h('header',{style:{borderBottom:'1px solid var(--brd)',background:'var(--s1)'}},h('div',{style:{maxWidth:1020,margin:'0 auto',padding:'0 28px',display:'flex',alignItems:'center',justifyContent:'space-between',height:60}},h('div',{style:{display:'flex',alignItems:'center',gap:12}},h('div',{style:{width:36,height:36,borderRadius:8,background:'linear-gradient(135deg,var(--ac),#1D4ED8)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,color:'#fff',fontFamily:'var(--mn)'}},'SDR'),h('div',null,h('div',{style:{fontSize:16,fontWeight:700,color:'var(--tb)'}},'SDR Engine'),h('div',{style:{fontSize:10,color:'var(--td)',fontFamily:'var(--mn)',letterSpacing:'.04em'}},'Context → Match → Outreach'))),h('button',{onClick:()=>setTheme(t=>t==='dark'?'light':'dark'),style:{width:36,height:36,borderRadius:8,border:'1px solid var(--brd)',background:'var(--s2)',cursor:'pointer',fontSize:16,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--td)'}},theme==='dark'?'☀️':'🌙'))),
+    // Nav
+    h('nav',{style:{borderBottom:'1px solid var(--brd)',background:'var(--s1)'}},h('div',{style:{maxWidth:1020,margin:'0 auto',padding:'0 28px',display:'flex'}},[['company','Your Company'],['documents','Solutions'],['apikey','AI Engine'],['engine','SDR Engine']].map(([k,l])=>h('button',{key:k,className:`ni${page===k?' a':''}`,onClick:()=>setPage(k)},l)))),
+
+    h('main',{style:{maxWidth:1020,margin:'0 auto',padding:'28px 28px 80px'}},
+
+      // ═══ COMPANY PROFILE PAGE ═══
+      page==='company'&&h(CompanyProfile,{myCompany,setMyCompany,repo,hasKeys,setPage}),
+
+      // ═══ AI ENGINE PAGE ═══
+      page==='apikey'&&h('div',{className:'card',style:{padding:32,animation:'fadeUp .4s'}},
+        h('h2',{style:{fontSize:20,fontWeight:700,color:'var(--tb)',marginBottom:6}},'AI Engine Setup'),
+        h('p',{style:{fontSize:14,color:'var(--td)',marginBottom:16,lineHeight:1.7}},'Connect multiple AI providers and fallback keys. The engine tries enabled keys in order and automatically switches on quota, rate-limit, timeout, or provider errors. Real-time credit balance is used only when a provider exposes it, otherwise failover is based on API responses.'),
+        h('div',{style:{display:'flex',gap:8,flexWrap:'wrap',marginBottom:18}},
+          Object.entries(PRESETS).filter(([k])=>['gemini','groq','openrouter','cloudflare','anthropic','openai','custom'].includes(k)).map(([k,v])=>h('button',{key:k,className:'btn btn-g',onClick:()=>addApiKey(k),style:{fontSize:13,padding:'8px 12px'}},'+ '+v.name))
+        ),
+        apiKeys.length===0&&h('div',{style:{padding:'12px 14px',background:'var(--am2)',borderRadius:8,fontSize:14,color:'var(--am)',fontWeight:500}},'No API keys added.'),
+        apiKeys.map((ak,idx)=>h('div',{key:ak.id,className:'card',style:{padding:16,marginBottom:12,background:'var(--s2)'}},
+          h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,marginBottom:editingKey===ak.id?14:0}},
+            h('div',{style:{minWidth:0}},
+              h('div',{style:{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}},
+                h('span',{className:'tag',style:{fontSize:10,color:ak.enabled!==false?'var(--gn)':'var(--td)',background:ak.enabled!==false?'var(--gn2)':'var(--s3)',border:'1px solid var(--brd)'}},ak.enabled!==false?'ENABLED':'OFF'),
+                h('strong',{style:{fontSize:15,color:'var(--tb)'}},ak.label||PRESETS[ak.provider]?.name||'API Key'),
+                h('span',{style:{fontSize:12,color:'var(--td)',fontFamily:'var(--mn)'}},PRESETS[ak.provider]?.name||ak.provider)
+              ),
+              ak.lastError&&h('div',{style:{fontSize:12,color:'var(--rd)',marginTop:5}},'Last error: '+ak.lastError),
+              ak.successCount&&h('div',{style:{fontSize:12,color:'var(--gn)',marginTop:5}},'Successful calls: '+ak.successCount)
+            ),
+            h('div',{style:{display:'flex',gap:6,flexShrink:0}},
+              h('button',{className:'btn btn-g',onClick:()=>updateApiKey(ak.id,{enabled:ak.enabled===false})},ak.enabled===false?'Enable':'Disable'),
+              h('button',{className:'btn btn-g',onClick:()=>setEditingKey(editingKey===ak.id?null:ak.id)},editingKey===ak.id?'Close':'Edit'),
+              h('button',{className:'btn btn-g',style:{color:'var(--rd)',borderColor:'rgba(220,38,38,.3)'},onClick:()=>{if(confirm('Delete this API key?'))deleteApiKey(ak.id)}},'Delete')
+            )
+          ),
+          editingKey===ak.id&&h('div',null,
+            h('div',{className:'row',style:{marginBottom:12}},
+              h('div',null,h('label',{className:'lbl'},'KEY LABEL'),h('input',{className:'inp',value:ak.label||'',onChange:e=>updateApiKey(ak.id,{label:e.target.value}),placeholder:'Gemini Main'})),
+              h('div',null,h('label',{className:'lbl'},'AI PROVIDER'),h('select',{className:'inp',value:ak.provider,onChange:e=>{const pr=PRESETS[e.target.value];updateApiKey(ak.id,{provider:e.target.value,label:ak.label||pr.name,url:pr.url,model:pr.model,cfAccountId:ak.cfAccountId||''})}},Object.entries(PRESETS).map(([k,v])=>h('option',{key:k,value:k},v.name))))
+            ),
+            h('label',{className:'lbl'},'API KEY / TOKEN'),
+            h('div',{style:{display:'flex',gap:8,marginBottom:12}},
+              h('input',{className:'inp',type:keyVis[ak.id]?'text':'password',value:ak.key||'',onChange:e=>updateApiKey(ak.id,{key:e.target.value}),placeholder:PRESETS[ak.provider]?.keyPlaceholder||'api-key',style:{flex:1,fontFamily:'var(--mn)',fontSize:13}}),
+              h('button',{className:'btn btn-g',onClick:()=>setKeyVis(v=>({...v,[ak.id]:!v[ak.id]})),style:{minWidth:70}},keyVis[ak.id]?'Hide':'Show')
+            ),
+            h('label',{className:'lbl'},'API ENDPOINT URL'),
+            h('input',{className:'inp',value:ak.url||'',onChange:e=>updateApiKey(ak.id,{url:e.target.value}),style:{marginBottom:12,fontFamily:'var(--mn)',fontSize:12}}),
+            h('label',{className:'lbl'},'MODEL'),
+            h('input',{className:'inp',value:ak.model||'',onChange:e=>updateApiKey(ak.id,{model:e.target.value}),placeholder:'e.g. gemini-2.5-flash-lite, llama-3.1-8b-instant, @cf/meta/llama-3.1-8b-instruct',style:{marginBottom:12,fontFamily:'var(--mn)',fontSize:12}}),
+            ak.provider==='cloudflare'&&h('div',{style:{marginBottom:12}},h('label',{className:'lbl'},'CLOUDFLARE ACCOUNT ID'),h('input',{className:'inp',value:ak.cfAccountId||'',onChange:e=>updateApiKey(ak.id,{cfAccountId:e.target.value}),placeholder:'Your Cloudflare Account ID',style:{fontFamily:'var(--mn)',fontSize:12}})),
+            h('p',{style:{fontSize:12,color:'var(--td)',lineHeight:1.6}},'Get key from: ',PRESETS[ak.provider]?.keyHelp||'your provider')
+          )
+        )),
+        hasKeys?h('div',{style:{padding:'10px 14px',background:'var(--gn2)',borderRadius:8,fontSize:14,color:'var(--gn)',fontWeight:500}},'✓ '+apiKeys.filter(k=>(k.enabled!==false)&&k.key).length+' enabled key(s) ready for failover'):h('div',{style:{padding:'10px 14px',background:'var(--am2)',borderRadius:8,fontSize:14,color:'var(--am)',fontWeight:500}},'⚠ Add at least one enabled API key.'),
+        h('div',{style:{marginTop:16,padding:'16px 18px',background:'var(--s2)',border:'1px solid var(--brd)',borderRadius:8}},
+          h('div',{onClick:()=>setUseProxy(p=>!p),style:{display:'flex',alignItems:'center',gap:12,cursor:'pointer'}},
+            h('div',{style:{width:22,height:22,borderRadius:4,border:`2px solid ${useProxy?'var(--ac)':'var(--brd2)'}`,background:useProxy?'var(--ac)':'transparent',display:'flex',alignItems:'center',justifyContent:'center',transition:'all .15s',flexShrink:0}},useProxy&&h('span',{style:{color:'#fff',fontSize:13,fontWeight:700}},'✓')),
+            h('div',null,h('div',{style:{fontSize:14,fontWeight:600,color:'var(--tb)'}},'Use CORS Proxy'),h('div',{style:{fontSize:12,color:'var(--td)',marginTop:2,lineHeight:1.5}},useProxy?'Enabled. API calls route through corsproxy.io to bypass browser CORS restrictions.':'Enable this if you get "Failed to fetch" errors. For production, use your own backend proxy.'))
+          ),
+          useProxy&&h('div',{style:{marginTop:10,padding:'8px 12px',background:'var(--am2)',borderRadius:6,fontSize:12,color:'var(--am)',lineHeight:1.5}},'Note: Your API keys pass through the proxy server. For a public tool, deploy your own backend instead.')
+        )
+      ),
+
+      // ═══ DOCUMENTS PAGE ═══
+      page==='documents'&&h(DocManager,{repo,setRepo,editId,setEditId,cfg}),
+
+      // ═══ ENGINE PAGE ═══
+      page==='engine'&&h('div',{style:{animation:'fadeUp .4s'}},
+        (!myCompany.name||!myCompany.industry)&&h('div',{style:{padding:'14px 20px',background:'var(--am2)',border:'1px solid rgba(180,83,9,.2)',borderRadius:8,marginBottom:12,fontSize:14,color:'var(--am)',fontWeight:500}},'⚠ Complete Your Company Profile first. It is used automatically for every output.'),
+        !hasKeys&&h('div',{style:{padding:'14px 20px',background:'var(--am2)',border:'1px solid rgba(180,83,9,.2)',borderRadius:8,marginBottom:12,fontSize:14,color:'var(--am)',fontWeight:500}},'⚠ Configure at least one key in the AI Engine tab.'),
+        h('div',{className:'card',style:{padding:'14px 18px',marginBottom:16,display:'flex',gap:10,flexWrap:'wrap',alignItems:'center'}},
+          h('span',{className:'tag tag-b'},'USING'),
+          h('span',{style:{fontSize:13,color:'var(--tb)',fontWeight:600}},'Company: '+(myCompany.name||'Not set')),
+          h('span',{style:{fontSize:13,color:'var(--td)'}},'• Solutions: '+repo.length+' loaded'),
+          h('span',{style:{fontSize:13,color:hasKeys?'var(--gn)':'var(--am)',fontWeight:600}},'• AI Engine: '+(hasKeys?'Configured':'Not configured'))
+        ),
+        h('div',{className:'card',style:{overflow:'hidden'}},
+          // Company
+          h('div',{style:{padding:'24px 28px 20px',borderBottom:'1px solid var(--brd)'}},h('div',{className:'sec'},'01 — PROSPECT COMPANY'),h('div',{className:'row'},h('div',null,h('label',{className:'lbl'},'PROSPECT COMPANY NAME *'),h('input',{className:'inp',value:cn,onChange:e=>setCn(e.target.value),placeholder:'e.g. Novartis'})),h('div',null,h('label',{className:'lbl'},'WEBSITE'),h('input',{className:'inp',value:ws,onChange:e=>setWs(e.target.value),placeholder:'e.g. novartis.com'})))),
+          // Intel
+          h('div',{style:{padding:'24px 28px 20px',borderBottom:'1px solid var(--brd)'}},
+            h('div',{className:'sec'},'02 — PROSPECT INTELLIGENCE'),
+            h('p',{style:{fontSize:13,color:'var(--td)',marginBottom:16}},'Use any combination of sources below.'),
+            h('label',{className:'lbl'},'📝 PASTE TEXT'),
+            h('textarea',{className:'inp',rows:4,value:it,onChange:e=>setIt(e.target.value),placeholder:'Paste ZoomInfo summary, company intel, recent initiatives...',style:{marginBottom:14}}),
+            h('label',{className:'lbl'},'📄 UPLOAD PDF'),
+            h('input',{ref:fr,type:'file',accept:'.pdf',style:{display:'none'},onChange:e=>setIfl(e.target.files?.[0]||null)}),
+            h('div',{onClick:()=>fr.current?.click(),style:{padding:'14px 20px',borderRadius:8,border:`1.5px dashed ${ifl?'var(--gn)':'var(--brd)'}`,background:ifl?'var(--gn2)':'var(--s2)',cursor:'pointer',display:'flex',alignItems:'center',gap:12,marginBottom:14}},h('span',{style:{fontSize:18}},ifl?'✅':'📄'),ifl?h('span',{style:{fontSize:13,color:'var(--gn)',fontWeight:600}},ifl.name):h('span',{style:{fontSize:13,color:'var(--td)'}},'Click to upload PDF')),
+            h('div',{onClick:()=>setUseWeb(w=>!w),style:{padding:'14px 18px',borderRadius:8,border:`1.5px solid ${useWeb?'var(--ac)':'var(--brd)'}`,background:useWeb?'var(--ac2)':'var(--s2)',cursor:'pointer',display:'flex',alignItems:'center',gap:12,marginBottom:14}},h('div',{style:{width:20,height:20,borderRadius:4,border:`2px solid ${useWeb?'var(--ac)':'var(--brd2)'}`,background:useWeb?'var(--ac)':'transparent',display:'flex',alignItems:'center',justifyContent:'center'}},useWeb&&h('span',{style:{color:'#fff',fontSize:12,fontWeight:700}},'✓')),h('div',null,h('div',{style:{fontSize:13,fontWeight:600,color:useWeb?'var(--ac)':'var(--tb)'}},'🔍 Auto-Research from Web'),h('div',{style:{fontSize:12,color:'var(--td)',marginTop:2}},useWeb?(cn?'Will research '+cn:'Enter company name first'):'Enable to research company online'))),
+            (it||ifl||useWeb)&&h('div',{style:{display:'flex',gap:6,flexWrap:'wrap',marginBottom:14}},h('span',{style:{fontSize:11,color:'var(--td)',fontFamily:'var(--mn)'}},'SOURCES:'),it&&h('span',{className:'tag tag-b',style:{fontSize:10}},'Text'),ifl&&h('span',{className:'tag',style:{fontSize:10,color:'var(--gn)',background:'var(--gn2)',border:'1px solid rgba(5,150,105,.2)'}},'PDF'),useWeb&&h('span',{className:'tag',style:{fontSize:10,color:'var(--am)',background:'var(--am2)',border:'1px solid rgba(180,83,9,.15)'}},'Web')),
+            h('label',{className:'lbl'},'ADDITIONAL INTEL (OPTIONAL)'),h('textarea',{className:'inp',rows:3,value:ai,onChange:e=>setAi(e.target.value),placeholder:'Job openings, IT headcount, tech stack, acquisitions...'})
+          ),
+          // Persona
+          h('div',{style:{padding:'24px 28px 20px',borderBottom:'1px solid var(--brd)'}},h('div',{className:'sec'},'03 — DECISION MAKER'),h('div',{className:'row'},h('div',null,h('label',{className:'lbl'},'PERSON NAME *'),h('input',{className:'inp',value:pn,onChange:e=>setPn(e.target.value),placeholder:'e.g. Sarah Chen'})),h('div',null,h('label',{className:'lbl'},'ROLE / TITLE *'),h('input',{className:'inp',value:rl,onChange:e=>setRl(e.target.value),placeholder:'e.g. VP Clinical Operations'}))),
+            h('div',{style:{marginTop:12}},h('label',{className:'lbl'},'LINKEDIN PROFILE URL'),h('input',{className:'inp',value:liUrl,onChange:e=>setLiUrl(e.target.value),placeholder:'https://linkedin.com/in/sarah-chen (the engine will research this profile)'})),
+            h('div',{style:{marginTop:12}},h('label',{className:'lbl'},'LINKEDIN DETAILS (paste or leave empty if URL provided above)'),h('textarea',{className:'inp',rows:3,value:li,onChange:e=>setLi(e.target.value),placeholder:'Paste experience, skills, about section, recent posts... or just provide the URL above and we will research it.'}))),
+          // Output
+          h('div',{style:{padding:'20px 28px',display:'flex',alignItems:'flex-end',justifyContent:'space-between',gap:16,flexWrap:'wrap'}},
+            h('div',{style:{display:'flex',gap:12,flexWrap:'wrap',flex:1}},
+              h('div',{style:{flex:'0 0 180px'}},h('label',{className:'lbl'},'OUTPUT TYPE'),h('select',{className:'inp',value:ot,onChange:e=>setOt(e.target.value)},h('option',{value:'email'},'Email'),h('option',{value:'linkedin'},'LinkedIn'),h('option',{value:'call'},'Call Script'))),
+              h('div',{style:{flex:'0 0 280px'}},h('label',{className:'lbl'},'SUGGESTED SOLUTION (OPTIONAL OVERRIDE)'),h('select',{className:'inp',value:selSol,onChange:e=>setSelSol(e.target.value)},h('option',{value:'auto'},'Auto-detect best fit from Solution Library'),repo.map(s=>h('option',{key:s.id,value:s.id},s.name)),h('option',{value:'other'},'Others, add custom solution')))
+            ),
+            selSol==='other'&&h('div',{style:{flex:'1 1 100%',display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginTop:4,padding:'14px 16px',background:'var(--s2)',border:'1px solid var(--brd)',borderRadius:8}},
+              h('div',null,h('label',{className:'lbl'},'CUSTOM SOLUTION NAME *'),h('input',{className:'inp',value:otherSolName,onChange:e=>setOtherSolName(e.target.value),placeholder:'e.g. Application Modernization Assessment'})),
+              h('div',null,h('label',{className:'lbl'},'SUPPORTING LINK'),h('input',{className:'inp',value:otherSolLink,onChange:e=>setOtherSolLink(e.target.value),placeholder:'https://...'})),
+              h('div',{style:{gridColumn:'1 / -1'}},h('label',{className:'lbl'},'CUSTOM SOLUTION DETAILS'),h('textarea',{className:'inp',rows:3,value:otherSolDetails,onChange:e=>setOtherSolDetails(e.target.value),placeholder:'Add who this solution is for, relevant pain points, proof points, ICP, or notes from the supporting link. The output will be based on these details.'})),
+              !hasOtherSolution&&h('div',{style:{gridColumn:'1 / -1',fontSize:12,color:'var(--am)',lineHeight:1.5}},'Add a custom solution name and either a supporting link or solution details to generate output from Others.')
+            ),
+            h('button',{className:'btn btn-p',onClick:run,disabled:!ok||ld,style:{minWidth:200}},ld?(ph==='r'?'Researching...':'Analyzing...'):'Analyze & Generate')
+          )
+        ),
+        // Loading
+        ld&&h('div',{className:'card',style:{marginTop:16,padding:'24px 28px',animation:'fadeUp .3s'}},h('div',{style:{fontSize:11,fontFamily:'var(--mn)',color:ph==='r'?'var(--am)':'var(--ac)',letterSpacing:'.05em',marginBottom:16,fontWeight:600}},ph==='r'?'GATHERING INTELLIGENCE':'ANALYZING'),steps.map((s,i)=>h('div',{key:`${ph}-${i}`,style:{display:'flex',alignItems:'center',gap:10,padding:'6px 0',opacity:i<=st?1:.2}},h('div',{style:{width:22,height:22,borderRadius:'50%',border:i<st?'none':i===st?`2px solid ${ph==='r'?'var(--am)':'var(--ac)'}`:'1.5px solid var(--brd)',background:i<st?(ph==='r'?'var(--am)':'var(--ac)'):'transparent',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,color:i<st?'#fff':'var(--td)',fontWeight:600,flexShrink:0}},i<st?'✓':i===st?h(Dots):''),h('span',{style:{fontSize:14,color:i===st?'var(--tb)':i<st?'var(--gn)':'var(--td)',fontWeight:i===st?600:400}},s)))),
+        // Source preview cards
+        it&&!ld&&res&&h('div',{className:'card',style:{marginTop:16,padding:'20px 28px',animation:'fadeUp .3s'}},
+          h('div',{style:{fontSize:11,fontFamily:'var(--mn)',color:'var(--ac)',letterSpacing:'.05em',marginBottom:10,fontWeight:600}},'📝 PASTED TEXT'),
+          h('p',{style:{fontSize:14,color:'var(--t)',lineHeight:1.7,maxHeight:150,overflowY:'auto',whiteSpace:'pre-wrap'}},it.length>500?it.slice(0,500)+'...':it)
+        ),
+        // PDF extract results
+        pdfRes&&!ld&&h('div',{className:'card',style:{marginTop:16,padding:'20px 28px',animation:'fadeUp .3s'}},
+          h('div',{style:{fontSize:11,fontFamily:'var(--mn)',color:'var(--gn)',letterSpacing:'.05em',marginBottom:10,fontWeight:600}},'📄 PDF EXTRACT'),
+          h('p',{style:{fontSize:14,color:'var(--t)',lineHeight:1.7,maxHeight:200,overflowY:'auto',whiteSpace:'pre-wrap'}},pdfRes.length>800?pdfRes.slice(0,800)+'...':pdfRes),
+          pdfRes.length>800&&h('details',{style:{marginTop:8}},
+            h('summary',{style:{fontSize:12,color:'var(--ac)',cursor:'pointer',fontWeight:600}},'Show full extract (',Math.round(pdfRes.length/1000),'K chars)'),
+            h('p',{style:{fontSize:13,color:'var(--t)',lineHeight:1.7,marginTop:8,maxHeight:400,overflowY:'auto',whiteSpace:'pre-wrap'}},pdfRes)
+          )
+        ),
+        // Web research results
+        wr&&!ld&&h('div',{className:'card',style:{marginTop:16,padding:'20px 28px',animation:'fadeUp .3s'}},h('div',{style:{fontSize:11,fontFamily:'var(--mn)',color:'var(--am)',letterSpacing:'.05em',marginBottom:10,fontWeight:600}},'🔍 WEB RESEARCH'),wr.companyOverview&&h('p',{style:{fontSize:14,color:'var(--t)',lineHeight:1.7}},wr.companyOverview)),
+        // LinkedIn research results
+        liRes&&!ld&&h('div',{className:'card',style:{marginTop:16,padding:'20px 28px',animation:'fadeUp .3s'}},
+          h('div',{style:{fontSize:11,fontFamily:'var(--mn)',color:'var(--pp)',letterSpacing:'.05em',marginBottom:10,fontWeight:600}},'👤 LINKEDIN RESEARCH'),
+          h('p',{style:{fontSize:14,color:'var(--t)',lineHeight:1.7}},liRes.fullSummary||''),
+          liRes.recentFocus&&h('div',{style:{marginTop:8,padding:'8px 12px',background:'var(--am2)',borderRadius:6}},h('span',{style:{fontSize:12,fontWeight:600,color:'var(--am)'}},'Recent focus: '),h('span',{style:{fontSize:13,color:'var(--t)'}},liRes.recentFocus))
+        ),
+        // Error
+        err&&h('div',{className:'card',style:{marginTop:16,padding:'18px 28px',borderColor:'rgba(220,38,38,.25)'}},h('div',{style:{fontSize:14,color:'var(--rd)'}},h('strong',null,'Error: '),err)),
+        // Results
+        res&&h('div',{ref:rr,className:'card',style:{marginTop:16,overflow:'hidden',animation:'fadeUp .5s'}},
+          h('div',{style:{display:'flex',borderBottom:'1px solid var(--brd)',background:'var(--s2)',overflowX:'auto'}},[['outreach','Outreach'],['solution','Solution'],['intelligence','Intelligence'],['persona','Persona']].map(([k,l])=>h('button',{key:k,className:`ni${tab===k?' a':''}`,onClick:()=>setTab(k),style:{fontSize:13}},l))),
+          h('div',{style:{padding:'24px 28px'}},
+            tab==='outreach'&&res.outreach&&h('div',{style:{animation:'fadeUp .3s'}},h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}},h('span',{className:'tag tag-b'},ot.toUpperCase()),h('button',{className:'btn btn-g',onClick:copy,style:{padding:'6px 14px',fontSize:13}},cp?'✓ Copied':'Copy')),res.outreach.subject&&h('div',{style:{marginBottom:16}},h('span',{style:{fontSize:12,color:'var(--td)',fontFamily:'var(--mn)',fontWeight:600}},'SUBJECT: '),h('span',{style:{fontSize:16,color:'var(--tb)',fontWeight:600}},res.outreach.subject)),h('div',{style:{fontSize:15,lineHeight:1.85,color:'var(--t)',whiteSpace:'pre-wrap',padding:'20px 24px',background:'var(--s2)',borderRadius:8,border:'1px solid var(--brd)'}},res.outreach.body)),
+            tab==='solution'&&h('div',{style:{animation:'fadeUp .3s'}},
+              res.recommendedSolution&&h('div',{style:{padding:'18px 22px',background:'var(--ac2)',border:'1px solid var(--ac3)',borderRadius:8,marginBottom:14}},h('div',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:8}},h('span',{style:{fontSize:24}},ICONS[res.recommendedSolution.id]||'⚡'),h('div',null,h('span',{className:'tag tag-b'},'BEST FIT'),h('div',{style:{fontSize:17,fontWeight:700,color:'var(--tb)',marginTop:4}},res.recommendedSolution.name))),h('p',{style:{fontSize:14,lineHeight:1.7,color:'var(--t)',marginTop:8}},res.recommendedSolution.reason),res.recommendedSolution.signalMatch&&h('div',{style:{marginTop:10,padding:'8px 12px',background:'var(--s2)',borderRadius:6}},h('span',{style:{fontSize:11,fontFamily:'var(--mn)',color:'var(--ac)',fontWeight:600}},'SIGNAL MATCH: '),h('span',{style:{fontSize:13,color:'var(--t)'}},res.recommendedSolution.signalMatch))),
+              res.relevantCaseStudy?.found&&h('div',{style:{padding:'16px 20px',background:'var(--gn2)',border:'1px solid rgba(5,150,105,.2)',borderRadius:8,marginBottom:14}},h('div',{style:{fontSize:11,fontFamily:'var(--mn)',color:'var(--gn)',marginBottom:6,fontWeight:600}},'CASE STUDY (ANONYMIZED)'),h('p',{style:{fontSize:14,lineHeight:1.7,color:'var(--t)'}},res.relevantCaseStudy.anonymizedReference)),
+              res.betterFitSuggestion?.hasBetterFit&&h('div',{style:{padding:'16px 20px',background:'var(--am2)',border:'1px solid rgba(180,83,9,.2)',borderRadius:8,marginBottom:14}},h('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:6}},h('span',{style:{fontSize:20}},ICONS[res.betterFitSuggestion.id]||'💡'),h('div',null,h('div',{style:{fontSize:11,fontFamily:'var(--mn)',color:'var(--am)',fontWeight:600}},'SUGGESTED BETTER FIT'),h('div',{style:{fontSize:15,fontWeight:700,color:'var(--tb)',marginTop:3}},res.betterFitSuggestion.name))),h('p',{style:{fontSize:13,lineHeight:1.7,color:'var(--t)'}},res.betterFitSuggestion.reason)),
+              res.alternativeSolutions?.length>0&&h('div',null,h('div',{style:{fontSize:11,fontFamily:'var(--mn)',color:'var(--td)',marginBottom:8,fontWeight:600}},'ALTERNATIVES'),res.alternativeSolutions.map((s,i)=>h('div',{key:i,className:'card',style:{padding:'14px 18px',marginBottom:8}},h('div',{style:{display:'flex',alignItems:'center',gap:8}},h('span',{style:{fontSize:18}},ICONS[s.id]||'⚡'),h('span',{style:{fontSize:14,fontWeight:600,color:'var(--tb)'}},s.name)),h('p',{style:{fontSize:13,color:'var(--td)',marginTop:4}},s.reason))))
+            ),
+            tab==='intelligence'&&res.companyIntelligence&&h('div',{style:{animation:'fadeUp .3s'}},
+              res.accountRelationship&&h('div',{style:{padding:'14px 16px',background:res.accountRelationship.type==='competitor'?'var(--am2)':'var(--ac2)',border:'1px solid var(--brd)',borderRadius:8,marginBottom:16}},h('div',{style:{fontSize:11,fontFamily:'var(--mn)',color:res.accountRelationship.type==='competitor'?'var(--am)':'var(--ac)',marginBottom:6,fontWeight:600}},'ACCOUNT RELATIONSHIP: '+String(res.accountRelationship.type||'unknown').toUpperCase()),h('div',{style:{fontSize:14,color:'var(--t)',lineHeight:1.6}},res.accountRelationship.reason||'')),
+              IB('SIGNALS','var(--ac)',res.companyIntelligence.signals,'c'),IB('PRIORITIES','var(--am)',res.companyIntelligence.businessPriorities,'l'),IB('PROBLEMS','var(--rd)',res.inferredProblems,'k'),
+              res.companyIntelligence.growthStage&&h('div',{style:{marginTop:16}},h('div',{style:{fontSize:11,fontFamily:'var(--mn)',color:'var(--td)',marginBottom:4,fontWeight:600}},'GROWTH STAGE'),h('div',{style:{fontSize:14,color:'var(--t)'}},res.companyIntelligence.growthStage))),
+            tab==='persona'&&res.personaAnalysis&&h('div',{style:{animation:'fadeUp .3s'}},
+              IB('RESPONSIBILITIES','var(--ac)',res.personaAnalysis.keyResponsibilities,'l'),
+              res.personaAnalysis.recentFocus&&h('div',{style:{marginBottom:16}},h('div',{style:{fontSize:11,fontFamily:'var(--mn)',color:'var(--am)',marginBottom:6,fontWeight:600}},'RECENT FOCUS'),h('div',{style:{fontSize:14,color:'var(--t)',padding:'12px 16px',background:'var(--am2)',borderRadius:6}},res.personaAnalysis.recentFocus)),
+              res.personaAnalysis.linkedInInsights&&h('div',{style:{marginBottom:16}},h('div',{style:{fontSize:11,fontFamily:'var(--mn)',color:'var(--pp)',marginBottom:6,fontWeight:600}},'LINKEDIN INSIGHTS'),h('div',{style:{fontSize:14,color:'var(--t)',padding:'12px 16px',background:'rgba(124,58,237,.05)',border:'1px solid rgba(124,58,237,.1)',borderRadius:6}},res.personaAnalysis.linkedInInsights)),
+              IB('PAIN POINTS','var(--rd)',res.personaAnalysis.painPoints,'k'),
+              res.personaAnalysis.decisionAuthority&&h('div',{style:{marginTop:16}},h('div',{style:{fontSize:11,fontFamily:'var(--mn)',color:'var(--pp)',marginBottom:4,fontWeight:600}},'DECISION AUTHORITY'),h('div',{style:{fontSize:14,color:'var(--t)'}},res.personaAnalysis.decisionAuthority)))
+          )
+        )
+      )
+    )
+  );
+}
+
+function IB(l,c,items,t){if(!items?.length)return null;return h('div',{style:{marginBottom:16}},h('div',{style:{fontSize:11,fontFamily:'var(--mn)',color:c,letterSpacing:'.04em',marginBottom:8,fontWeight:600}},l),t==='c'?h('div',{style:{display:'flex',flexWrap:'wrap',gap:6}},items.map((s,i)=>h('span',{key:i,className:'tag tag-d',style:{fontSize:12}},s))):t==='l'?items.map((p,i)=>h('div',{key:i,style:{fontSize:14,color:'var(--t)',padding:'8px 0',borderBottom:'1px solid var(--brd)'}},p)):items.map((p,i)=>h('div',{key:i,style:{fontSize:14,color:'var(--t)',padding:'10px 14px',background:'var(--rd2)',border:'1px solid rgba(220,38,38,.1)',borderRadius:6,marginBottom:5}},p)))}
+
+ReactDOM.render(h(App),document.getElementById('root'));
+</script>
+</body>
+</html>
